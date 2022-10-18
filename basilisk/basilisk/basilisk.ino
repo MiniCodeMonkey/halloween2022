@@ -2,7 +2,16 @@
 #include <ESPmDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
+#include <SonosUPnP.h>
+#include <MicroXPath_P.h>
 #include "wifi_credentials.h"
+
+WiFiClient client;
+SonosUPnP g_sonos = SonosUPnP(client, 0);
+
+// Living room
+IPAddress g_KitchenIP(192, 168, 3, 12);
+const char g_KitchenID[] = "7828CA820BF0:5";
 
 #define DEVICE_NAME "basilisk"
 #define WIFI_CONNECT_TIMEOUT_MS 15000
@@ -46,10 +55,17 @@ void setup() {
   
   pinMode(SPRINKLER_RELAY_PIN, OUTPUT);
   digitalWrite(SPRINKLER_RELAY_PIN, LOW);
+
+  g_sonos.playHttp(g_KitchenIP, "http://192.168.3.35:8000/cousing-mischief-SBA-300515238.mp3");
+  //g_sonos.playRadio(g_KitchenIP, "//lyd.nrk.no/nrk_radio_p3_mp3_h.m3u", "NRK P3");
 }
 
 void loop() {
-  ArduinoOTA.handle();
+  ArduinoOTA.handle();  
+
+  int volume = g_sonos.getVolume(g_KitchenIP);
+  Serial.print("Volume = ");
+  Serial.println(volume);
   
   /*
   digitalWrite(SPRINKLER_RELAY_PIN, HIGH);
