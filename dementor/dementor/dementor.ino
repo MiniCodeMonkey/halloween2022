@@ -7,21 +7,29 @@
 
 #define SPI_SPEED SD_SCK_MHZ(4)
 
+#define BUTTON_PIN     12
 #define RELAY1_PIN     4
-#define RELAY2_PIN     0
-#define PIR_SENSOR_PIN    5
+#define RELAY2_PIN     1
+#define PIR_SENSOR_PIN 5
+
+#define LID_OPEN_TIME_MS 5000
 
 SdFat sd;
 SFEMP3Shield MP3player;
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
-Adafruit_DCMotor *lidMotor = AFMS.getMotor(2);
-unsigned long lastGrowlTime;
+Adafruit_StepperMotor *winchMotor = AFMS.getStepper(200, 2);
+unsigned long lastTriggerTime;
 
 int pirValue;
 
 void setup() {  
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+  
   pinMode(RELAY1_PIN, OUTPUT);
   digitalWrite(RELAY1_PIN, LOW);
+
+  pinMode(RELAY2_PIN, OUTPUT);
+  digitalWrite(RELAY2_PIN, LOW);
 
   pinMode(PIR_SENSOR_PIN, INPUT);
   
@@ -29,6 +37,24 @@ void setup() {
   while (!Serial);
 
   randomSeed(analogRead(0));
+
+  /*while (true) {
+    digitalWrite(RELAY1_PIN, LOW);
+    digitalWrite(RELAY2_PIN, HIGH);
+    delay(500);
+
+    digitalWrite(RELAY1_PIN, HIGH);
+    digitalWrite(RELAY2_PIN, LOW);
+    delay(500);
+
+    digitalWrite(RELAY1_PIN, HIGH);
+    digitalWrite(RELAY2_PIN, HIGH);
+    delay(500);
+
+    digitalWrite(RELAY1_PIN, LOW);
+    digitalWrite(RELAY2_PIN, LOW);
+    delay(5000);
+  }*/
 
   initSound();
   initMotor();
@@ -40,8 +66,14 @@ void initMotor() {
   }
   Serial.println("Motor Shield found.");
 
-  lidMotor->setSpeed(100);
-  lidMotor->run(RELEASE);
+  winchMotor->setSpeed(500);
+
+  /*while (true) {
+    winchMotor->step(2000, FORWARD, DOUBLE);
+    delay(1000);
+    winchMotor->step(2000, BACKWARD, DOUBLE);
+    delay(2500);
+  }*/
 }
 
 void initSound() {
@@ -60,48 +92,71 @@ void initSound() {
 }
 
 void loop() {
-  pirValue = digitalRead(PIR_SENSOR_PIN);
-  if (pirValue == HIGH && millis()-lastGrowlTime > 15000) {
-    Serial.println("Motion detected.");
-    lastGrowlTime = millis();
+  int buttonVal = digitalRead(BUTTON_PIN);
 
-    growl();
+  if (buttonVal == LOW) {
+    Serial.println("Button pressed! Opening lid");
+    openLid();
+    delay(LID_OPEN_TIME_MS);
+    stopLid();
 
-    Serial.println("Running motor.");
-    digitalWrite(RELAY1_PIN, HIGH);  
-    lidMotor->run(FORWARD);
-    delay(1500);
-    digitalWrite(RELAY1_PIN, LOW);
-    lidMotor->run(RELEASE);
-    delay(100);
-
-    while (MP3player.isPlaying()) {
-      Serial.println("Waiting for sound.");
-      delay(100);
+    do {
+      buttonVal = digitalRead(BUTTON_PIN);
+      Serial.println("Waiting for button to be pressed again");
+      delay(1000);
     }
+    while (buttonVal == HIGH);
 
-    delay(2500);
-
-    MP3player.playMP3("yawns001.mp3");
+    Serial.println("Closing lid");
+    closeLid();
+    delay(LID_OPEN_TIME_MS);
+    stopLid();
   }
+  
+  pirValue = digitalRead(PIR_SENSOR_PIN);
+  if (pirValue == HIGH) {
+    Serial.println("Motion detected.");
+    lastTriggerTime = millis();
 
-  if (!MP3player.isPlaying()) {
-    Serial.println("Snooring");
-    MP3player.playMP3("snore001.mp3");
-  }
+    playSound();
+    openLid();
+    delay(2000);
+
+    raiseAndLowerDementorAndLid();
     
+    delay(10000);
+  }
+   
   delay(100);
 }
 
-void growl() {  
-  Serial.println("Preparing to growl");
-  char filename[9];
-  int trackNo = random(1, 3);
-  Serial.println(trackNo);
-  sprintf(filename, "growl00%d.mp3", trackNo);
-
-  Serial.println(filename);
-
+void playSound() {  
   MP3player.stopTrack();
-  MP3player.playMP3(filename);
+  MP3player.playMP3("track007.mp3");
+}
+
+void openLid() {
+  digitalWrite(RELAY1_PIN, HIGH);  
+  digitalWrite(RELAY2_PIN, LOW);
+}
+
+void closeLid() {
+  digitalWrite(RELAY1_PIN, LOW);  
+  digitalWrite(RELAY2_PIN, HIGH);
+}
+
+void stopLid() {
+  digitalWrite(RELAY1_PIN, LOW);  
+  digitalWrite(RELAY2_PIN, LOW);
+}
+
+void raiseAndLowerDementorAndLid() {
+  winchMotor->step(2000, FORWARD, DOUBLE);
+  delay(2000);
+  winchMotor->step(2000, BACKWARD, DOUBLE);
+  delay(2000);
+  closeLid();
+  delay(2500);
+
+  stopLid();
 }
