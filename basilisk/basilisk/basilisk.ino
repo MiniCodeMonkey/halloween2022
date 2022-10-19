@@ -1,6 +1,7 @@
 #include <WiFi.h>
-#include <ESPmDNS.h>
 #include <WiFiUdp.h>
+#include <ESPmDNS.h>
+#include <TelnetStream.h>
 #include <ArduinoOTA.h>
 #include <SonosUPnP.h>
 #include <MicroXPath_P.h>
@@ -9,14 +10,13 @@
 WiFiClient client;
 SonosUPnP g_sonos = SonosUPnP(client, 0);
 
-// Living room
-IPAddress g_KitchenIP(192, 168, 3, 12);
-const char g_KitchenID[] = "7828CA820BF0:5";
+IPAddress g_SpeakerIP(192, 168, 2, 34);
+const char g_SpeakerID[] = "B8E937801D8C:C";
 
 #define DEVICE_NAME "basilisk"
 #define WIFI_CONNECT_TIMEOUT_MS 15000
 
-#define PIR_SENSOR_PIN A2
+#define PIR_SENSOR_PIN 14
 #define BATTERY_VOLTAGE_PIN A13
 
 #define SPRINKLER_RELAY_PIN 12
@@ -48,6 +48,8 @@ void setup() {
   
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
+
+    TelnetStream.begin();
   }
 
   pinMode(PIR_SENSOR_PIN, INPUT);
@@ -55,34 +57,33 @@ void setup() {
   
   pinMode(SPRINKLER_RELAY_PIN, OUTPUT);
   digitalWrite(SPRINKLER_RELAY_PIN, LOW);
-
-  g_sonos.playHttp(g_KitchenIP, "http://192.168.3.35:8000/cousing-mischief-SBA-300515238.mp3");
-  //g_sonos.playRadio(g_KitchenIP, "//lyd.nrk.no/nrk_radio_p3_mp3_h.m3u", "NRK P3");
 }
 
 void loop() {
-  ArduinoOTA.handle();  
-
-  int volume = g_sonos.getVolume(g_KitchenIP);
-  Serial.print("Volume = ");
-  Serial.println(volume);
-  
-  /*
-  digitalWrite(SPRINKLER_RELAY_PIN, HIGH);
-  delay(500);
-  digitalWrite(SPRINKLER_RELAY_PIN, LOW);
-  delay(10000);
-  */
+  ArduinoOTA.handle();
 
   pirVal = digitalRead(PIR_SENSOR_PIN);
 
   if (pirVal == HIGH) {
-    Serial.println("Motion detected");
+    TelnetStream.println("Motion");
+    handleMotion();
   } else {
-    Serial.println("Motion NOT detected");
+    TelnetStream.println("No Motion");
   }
 
   delay(1000);
+}
+
+void handleMotion() {
+  g_sonos.setVolume(g_SpeakerIP, 100);
+  g_sonos.playHttp(g_SpeakerIP, "http://bravo.local:8000/basilisk_noises.mp3");
+  
+  delay(15000); // Wait until the right bit in the sound bite
+  
+  digitalWrite(SPRINKLER_RELAY_PIN, HIGH);
+  delay(500);
+  digitalWrite(SPRINKLER_RELAY_PIN, LOW);
+  delay(20000);
 }
 
 void checkBattery() {
