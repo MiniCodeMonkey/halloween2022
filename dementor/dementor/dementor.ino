@@ -122,12 +122,9 @@ void loop() {
     delay(1000);
     raiseDementor();
     stopLid();
-    
-    delay(10000);
- 
     stopFog();
-
-    delay(25000);
+    
+    delay(35000);
 
     lowerDementor();
     closeLid();
@@ -180,7 +177,6 @@ void raiseDementor() {
 void lowerDementor() {
   Serial.println("Lowering dementor");
   winchMotor->step(4000, BACKWARD, DOUBLE);
-  delay(2000);
 }
 
 void checkIfButtonPressed() {
