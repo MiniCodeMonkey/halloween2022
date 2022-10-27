@@ -36,7 +36,7 @@ idler_ht = 1.5;		// height of idler flange over pulley, standard = 1.5
 
 pulley_t_ht = 12;	// length of toothed part of pulley, standard = 12
 pulley_b_ht = 8;		// pulley base height, standard = 8. Set to same as idler_ht if you want an idler but no pulley.
-pulley_b_dia = 35;	// pulley base diameter, standard = 20
+pulley_b_dia = 36;	// pulley base diameter, standard = 20
 no_of_nuts = 1;		// number of captive nuts required, standard = 1
 nut_angle = 90;		// angle between nuts, standard = 90
 nut_shaft_distance = 1.2;	// distance between inner face of nut and shaft, can be negative.
@@ -120,7 +120,7 @@ module pulley( belt_type , pulley_OD , tooth_depth , tooth_width )
     
         difference() {
     translate([0, 0, 25.5])    
-    cylinder(h = 40, r=17, center = true);
+    cylinder(h = 40, r=17.8, center = true);
             
                 translate([0, 0, 15])    
     cylinder(h = 40, r=3, center = true);

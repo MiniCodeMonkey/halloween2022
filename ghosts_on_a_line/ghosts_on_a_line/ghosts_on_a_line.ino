@@ -42,7 +42,7 @@ void setup() {
   }
 
   if (!AFMS.begin()) {
-    Serial.println("Could not find Motor Shield. Check wiring.");
+    TelnetStream.println("Could not find Motor Shield. Check wiring.");
     while (1);
   }
 }
@@ -57,8 +57,8 @@ void loop() {
   }
 
   if (speedValue != currentSpeed) {
-    Serial.print("Changed speed to ");
-    Serial.println(currentSpeed);
+    TelnetStream.print("Changed speed to ");
+    TelnetStream.println(currentSpeed);
     currentSpeed = speedValue;
     stepper->setSpeed(currentSpeed);
   }

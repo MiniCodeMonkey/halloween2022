@@ -42,7 +42,7 @@ void setup() {
   }
 
   if (!AFMS.begin()) {
-    Serial.println("Could not find Motor Shield. Check wiring.");
+    TelnetStream.println("Could not find Motor Shield. Check wiring.");
     while (1);
   }
 }

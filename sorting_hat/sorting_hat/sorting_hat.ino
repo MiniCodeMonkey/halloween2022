@@ -1,20 +1,30 @@
-#include <Adafruit_MotorShield.h>
+#include <Wire.h>
+#include <Adafruit_VL6180X.h>
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include <ESPmDNS.h>
 #include <TelnetStream.h>
 #include <ArduinoOTA.h>
+#include <SonosUPnP.h>
+#include <MicroXPath_P.h>
 #include "wifi_credentials.h"
 
 WiFiClient client;
+SonosUPnP g_sonos = SonosUPnP(client, 0);
 
-#define DEVICE_NAME "voldemort"
-#define WIFI_CONNECT_TIMEOUT_MS 15000
+IPAddress g_SpeakerIP(192, 168, 3, 13);
 
-Adafruit_MotorShield AFMS = Adafruit_MotorShield();
-Adafruit_StepperMotor *stepper = AFMS.getStepper(200, 1);
+#define DEVICE_NAME "sortinghat"
+#define WIFI_CONNECT_TIMEOUT_MS 60000
+#define WAIT_FOR_PERSON_TO_LEAVE_TIMEOUT_MS 20000
 
-uint8_t currentSpeed = 0;
+//String FILESERVER_PREFIX = "http://bravo.local:8000/";
+String FILESERVER_PREFIX = "http://192.168.3.35:8000/";
+
+#define HOUSES_COUNT 4
+String houses[HOUSES_COUNT] = { "hufflepuff", "ravenclaw", "slytherin", "gryffindor" };
+
+Adafruit_VL6180X vl = Adafruit_VL6180X();
 
 void setup() {
   Serial.begin(115200);
@@ -22,7 +32,7 @@ void setup() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   while (WiFi.waitForConnectResult() != WL_CONNECTED) {
-    Serial.println("WiFI Connection Failed");
+    Serial.println("WiFi Connection Failed");
     delay(1000);
 
     if (millis() > WIFI_CONNECT_TIMEOUT_MS) {
@@ -41,16 +51,73 @@ void setup() {
     TelnetStream.begin();
   }
 
-  if (!AFMS.begin()) {
-    Serial.println("Could not find Motor Shield. Check wiring.");
+  if (!vl.begin()) {
+    TelnetStream.println("Failed to find sensor");
     while (1);
   }
+
+  randomSeed(analogRead(0));
 }
 
 void loop() {
   ArduinoOTA.handle();
-  stepper->step(100, FORWARD, DOUBLE);
-  delay(1000);
-  stepper->step(100, BACKWARD, DOUBLE);
-  delay(1000);
+  
+  uint8_t range = vl.readRange();
+  uint8_t status = vl.readRangeStatus();
+
+  if (status == VL6180X_ERROR_NONE) {
+    TelnetStream.print("Range: ");
+    TelnetStream.println(range);
+
+    sortIntoHouse();
+  }
+  delay(50);
+}
+
+void sortIntoHouse() {
+    g_sonos.setVolume(g_SpeakerIP, 40);
+
+    String selectedHouse = houses[random(0, HOUSES_COUNT)];
+
+    Serial.println(selectedHouse);
+
+    String filename_prefix = "sorting_hat_";
+    String filename_suffix = ".mp3";
+    String url = FILESERVER_PREFIX + filename_prefix + selectedHouse + filename_suffix;
+
+    Serial.println(url);
+    
+    g_sonos.playHttp(g_SpeakerIP, url.c_str());
+
+    bool isPlaying = true;
+
+    while (isPlaying) {
+      delay(1000);
+      isPlaying = g_sonos.getState(g_SpeakerIP) == SONOS_STATE_PLAYING;
+    }
+
+    Serial.println("Done!");
+
+    waitForPersonToLeave();
+    
+    Serial.println("Ready for next student");
+    delay(5000);
+}
+
+void waitForPersonToLeave() {
+  int startTime = millis();
+  uint8_t range = vl.readRange();
+  uint8_t status = vl.readRangeStatus();
+  
+  while (status == VL6180X_ERROR_NONE) {
+    Serial.println("Waiting for person to leave");
+    delay(500);
+    range = vl.readRange();
+    status = vl.readRangeStatus();
+
+    if (millis()-startTime > WAIT_FOR_PERSON_TO_LEAVE_TIMEOUT_MS) {
+      Serial.println("Timed out, waiting for person to leave");
+      break;
+    }
+  }
 }
