@@ -44,8 +44,19 @@ void setup() {
   while (!Serial);
 
   // testConnections();
+  testWinch();
   
   resetLidPosition();
+}
+
+void testWinch() {
+  while (true) {
+    raiseDementor();
+    delay(5000);
+    
+    lowerDementor();
+    delay(5000);
+  }
 }
 
 void initSound() {
@@ -70,7 +81,7 @@ void initMotor() {
     Serial.println("Could not find Motor Shield. Check wiring.");
   }
 
-  winchMotor->setSpeed(500);
+  winchMotor->setSpeed(200);
 }
 
 void testConnections() {
@@ -121,6 +132,7 @@ void loop() {
     openLid();
     delay(1000);
     raiseDementor();
+    delay(2000);
     stopLid();
     stopFog();
     
@@ -170,13 +182,12 @@ void stopFog() {
 
 void raiseDementor() {
   Serial.println("Raising dementor");
-  winchMotor->step(4000, FORWARD, DOUBLE);
-  delay(2000);
+  winchMotor->step(1700, FORWARD, DOUBLE);
 }
 
 void lowerDementor() {
   Serial.println("Lowering dementor");
-  winchMotor->step(4000, BACKWARD, DOUBLE);
+  winchMotor->step(1700, BACKWARD, DOUBLE);
 }
 
 void checkIfButtonPressed() {
