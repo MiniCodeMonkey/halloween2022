@@ -81,7 +81,7 @@ void initMotor() {
     Serial.println("Could not find Motor Shield. Check wiring.");
   }
 
-  winchMotor->setSpeed(200);
+  winchMotor->setSpeed(100);
 }
 
 void testConnections() {
@@ -182,12 +182,12 @@ void stopFog() {
 
 void raiseDementor() {
   Serial.println("Raising dementor");
-  winchMotor->step(1700, FORWARD, DOUBLE);
+  winchMotor->step(1500, FORWARD, DOUBLE);
 }
 
 void lowerDementor() {
   Serial.println("Lowering dementor");
-  winchMotor->step(1700, BACKWARD, DOUBLE);
+  winchMotor->step(1500, BACKWARD, DOUBLE);
 }
 
 void checkIfButtonPressed() {

@@ -12,19 +12,21 @@
 WiFiClient client;
 SonosUPnP g_sonos = SonosUPnP(client, 0);
 
-IPAddress g_SpeakerIP(192, 168, 3, 13);
+IPAddress g_SpeakerIP(192, 168, 2, 116);
 
 #define DEVICE_NAME "sortinghat"
 #define WIFI_CONNECT_TIMEOUT_MS 60000
 #define WAIT_FOR_PERSON_TO_LEAVE_TIMEOUT_MS 20000
 
-//String FILESERVER_PREFIX = "http://bravo.local:8000/";
-String FILESERVER_PREFIX = "http://192.168.3.35:8000/";
+String FILESERVER_PREFIX = "http://bravo.local:8000/";
+//String FILESERVER_PREFIX = "http://192.168.3.35:8000/";
 
 #define HOUSES_COUNT 4
 String houses[HOUSES_COUNT] = { "hufflepuff", "ravenclaw", "slytherin", "gryffindor" };
 
 Adafruit_VL6180X vl = Adafruit_VL6180X();
+
+int numberOfDetections = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -68,24 +70,32 @@ void loop() {
   if (status == VL6180X_ERROR_NONE) {
     TelnetStream.print("Range: ");
     TelnetStream.println(range);
+    numberOfDetections++;
 
-    sortIntoHouse();
+    if (numberOfDetections >= 3) {
+      numberOfDetections = 0;
+      sortIntoHouse();
+    }
+  } else {
+    numberOfDetections = 0;
   }
   delay(50);
 }
 
 void sortIntoHouse() {
-    g_sonos.setVolume(g_SpeakerIP, 40);
+    TelnetStream.println("Sorting into house");
+    delay(1000);
+    g_sonos.setVolume(g_SpeakerIP, 100);
 
     String selectedHouse = houses[random(0, HOUSES_COUNT)];
 
-    Serial.println(selectedHouse);
+    TelnetStream.println(selectedHouse);
 
     String filename_prefix = "sorting_hat_";
     String filename_suffix = ".mp3";
     String url = FILESERVER_PREFIX + filename_prefix + selectedHouse + filename_suffix;
 
-    Serial.println(url);
+    TelnetStream.println(url);
     
     g_sonos.playHttp(g_SpeakerIP, url.c_str());
 
@@ -96,11 +106,11 @@ void sortIntoHouse() {
       isPlaying = g_sonos.getState(g_SpeakerIP) == SONOS_STATE_PLAYING;
     }
 
-    Serial.println("Done!");
+    TelnetStream.println("Done!");
 
     waitForPersonToLeave();
     
-    Serial.println("Ready for next student");
+    TelnetStream.println("Ready for next student");
     delay(5000);
 }
 
@@ -110,13 +120,13 @@ void waitForPersonToLeave() {
   uint8_t status = vl.readRangeStatus();
   
   while (status == VL6180X_ERROR_NONE) {
-    Serial.println("Waiting for person to leave");
+    TelnetStream.println("Waiting for person to leave");
     delay(500);
     range = vl.readRange();
     status = vl.readRangeStatus();
 
     if (millis()-startTime > WAIT_FOR_PERSON_TO_LEAVE_TIMEOUT_MS) {
-      Serial.println("Timed out, waiting for person to leave");
+      TelnetStream.println("Timed out, waiting for person to leave");
       break;
     }
   }
